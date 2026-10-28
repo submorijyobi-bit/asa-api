@@ -3,40 +3,791 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring Boot API Client</title>
+    <title>朝メモ - Bright Morning Notes</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sunshine: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                        },
+                        morning: {
+                            sky: '#e0f2fe',
+                            softSky: '#f0f9ff',
+                            rose: '#fff1f2',
+                            peach: '#fff7ed',
+                            accent: '#f97316',
+                            deepSky: '#0284c7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Zen Maru Gothic"', '"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        .note-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        .error { color: red; font-weight: bold; }
+        /* Glassmorphism & Custom Accents */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .morning-gradient {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 35%, #e0f2fe 100%);
+        }
+        .header-gradient {
+            background: linear-gradient(120deg, #f97316 0%, #fbbf24 50%, #38bdf8 100%);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(241, 245, 249, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
-<body>
+<body class="morning-gradient min-h-screen text-slate-800 font-sans pb-16 antialiased selection:bg-amber-200 selection:text-amber-900">
 
-<h1>📝 朝メモアプリ</h1>
+<!-- Toast Notification Overlay -->
+<div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-<div id="error-message" class="error"></div>
+<div class="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
 
-<h2>1. 新規メモ作成 (POST)</h2>
-<form id="create-form">
-    <input type="text" id="title" placeholder="タイトル" required>
-    <textarea id="content" placeholder="内容" required></textarea>
-    <button type="submit">メモを保存</button>
-</form>
+    <!-- Header Dashboard -->
+    <header class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl shadow-amber-500/5 mb-8 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-amber-300/30 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-10 -top-10 w-48 h-48 bg-sky-300/30 rounded-full blur-3xl pointer-events-none"></div>
 
-<hr>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100/80 text-amber-800 text-xs font-bold mb-3 border border-amber-200/60 shadow-sm">
+                    <i data-lucide="sun" class="w-4 h-4 text-amber-500 animate-spin-slow"></i>
+                    <span id="greeting-text">おはようございます！</span>
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-amber-600 via-orange-500 to-sky-600">
+                    朝メモ ☀️ <span class="text-xl sm:text-2xl font-medium text-slate-600">Morning Notes</span>
+                </h1>
+                <p class="text-sm sm:text-base text-slate-500 mt-1">朝の新鮮なひらめきや本日の重要目標をすっきり記録しましょう。</p>
+            </div>
 
-<h2>2. メモ一覧 (GET /api/notes)</h2>
-<button onclick="fetchNotes()">メモ一覧を更新</button>
-<div id="notes-list">
+            <!-- Clock Card -->
+            <div class="w-full md:w-auto bg-white/90 border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center justify-between md:justify-end gap-5">
+                <div class="text-left md:text-right">
+                    <div id="live-date" class="text-xs font-bold text-amber-600 tracking-wide">----年--月--日 (-)</div>
+                    <div id="live-clock" class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-wider font-mono">00:00:00</div>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-400 flex items-center justify-center text-white shadow-md shadow-amber-400/30 shrink-0">
+                    <i data-lucide="sunrise" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Morning Habit / Focus Banner -->
+        <div class="mt-6 pt-6 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/60 border border-amber-100">
+                <div class="p-2 rounded-xl bg-amber-100 text-amber-700">
+                    <i data-lucide="droplet" class="w-4 h-4"></i>
+                </div>
+                <span class="text-xs font-semibold text-slate-700">コップ1杯の白湯を飲む</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/60 border border-sky-100">
+                <div class="p-2 rounded-xl bg-sky-100 text-sky-700">
+                    <i data-lucide="wind" class="w-4 h-4"></i>
+                </div>
+                <span class="text-xs font-semibold text-slate-700">朝の深呼吸・軽いストレッチ</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/60 border border-emerald-100">
+                <div class="p-2 rounded-xl bg-emerald-100 text-emerald-700">
+                    <i data-lucide="target" class="w-4 h-4"></i>
+                </div>
+                <span class="text-xs font-semibold text-slate-700">今日の最重要タスクを3つ決める</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+        <!-- Left Panel: Form & API Inspector (4 cols on lg) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+
+            <!-- 1. Note Creation Form Card -->
+            <section class="glass-card rounded-3xl p-6 shadow-xl shadow-amber-500/5 border border-white">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-sm shadow-md shadow-amber-500/30">1</span>
+                        新規メモ作成 <span class="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">POST</span>
+                    </h2>
+                    <button type="button" onclick="resetForm()" class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> リセット
+                    </button>
+                </div>
+
+                <form id="create-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="editing-id" value="">
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">タイトル <span class="text-amber-500">*</span></label>
+                        <input type="text" id="title" placeholder="例: 今日の3大目標" required
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/80 focus:border-amber-400 bg-white/90 text-sm transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">カテゴリー</label>
+                            <select id="category" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/80 bg-white/90 text-xs font-medium text-slate-700">
+                                <option value="goal">🌅 本日の目標</option>
+                                <option value="idea">💡 朝のひらめき</option>
+                                <option value="todo">📝 やること (ToDo)</option>
+                                <option value="gratitude">🧘 感謝のメモ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">優先度</label>
+                            <select id="priority" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/80 bg-white/90 text-xs font-medium text-slate-700">
+                                <option value="high">🔥 高 (High)</option>
+                                <option value="medium" selected>⚡ 中 (Medium)</option>
+                                <option value="low">🌱 低 (Low)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1">内容 <span class="text-amber-500">*</span></label>
+                        <textarea id="content" rows="4" placeholder="朝の静かな時間に浮かんだ思考やタスクを入力..." required
+                                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/80 focus:border-amber-400 bg-white/90 text-sm transition resize-none"></textarea>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-[0.99]">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span id="btn-text">メモを保存 ☀️</span>
+                    </button>
+                </form>
+            </section>
+
+            <!-- 2. ID Lookup & Single Note Controller Card -->
+            <section class="glass-card rounded-3xl p-6 shadow-xl shadow-amber-500/5 border border-white">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    <span class="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center text-sm shadow-md shadow-sky-500/30">2</span>
+                    個別メモ操作 (ID指定)
+                </h2>
+
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="number" id="note-id" placeholder="ID (例: 101)" min="1" value="101"
+                               class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-400/80 bg-white/90 text-sm">
+                        <button onclick="fetchNoteById()" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs shadow-md shadow-sky-500/20 flex items-center gap-1.5 shrink-0 transition">
+                            <i data-lucide="search" class="w-3.5 h-3.5"></i> 検索 (GET)
+                        </button>
+                    </div>
+
+                    <div id="inspector-result" class="hidden rounded-2xl p-4 bg-sky-50/80 border border-sky-100 text-xs transition-all">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Mock REST API Debug Log Console -->
+            <section class="glass-card rounded-3xl p-5 shadow-xl shadow-amber-500/5 border border-white">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="terminal" class="w-4 h-4 text-slate-500"></i>
+                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">REST API 通信ログ</span>
+                    </div>
+                    <button onclick="clearConsoleLog()" class="text-[10px] text-slate-400 hover:text-slate-600">クリア</button>
+                </div>
+                <div id="api-console" class="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] h-28 overflow-y-auto space-y-1 shadow-inner border border-slate-800">
+                    <div class="text-slate-500">// API Request response monitor</div>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Right Panel: Note List & Filter View (7 cols on lg) -->
+        <div class="lg:col-span-7 flex flex-col gap-5">
+
+            <!-- Filter, Search, and Header Control -->
+            <div class="glass-card rounded-3xl p-5 shadow-xl shadow-amber-500/5 border border-white flex flex-col gap-4">
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-lg font-bold text-slate-800">メモ一覧</h2>
+                        <span id="notes-count-badge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">0件</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="fetchNotes(true)" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-semibold text-xs flex items-center gap-1.5 shadow-sm transition">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-500"></i> 一覧更新 (GET)
+                        </button>
+                        <button onclick="clearAllNotesPrompt()" class="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-semibold text-xs flex items-center gap-1 transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 全消去
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Input & Tabs -->
+                <div class="space-y-3">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="search-input" oninput="renderNotes()" placeholder="タイトルまたは内容で検索..."
+                               class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-400/80 bg-white/90 text-xs">
+                    </div>
+
+                    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs font-medium no-scrollbar">
+                        <button onclick="setFilter('all')" id="tab-all" class="filter-tab px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold whitespace-nowrap transition">すべて</button>
+                        <button onclick="setFilter('goal')" id="tab-goal" class="filter-tab px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white text-slate-600 border border-slate-200/80 whitespace-nowrap transition">🌅 目標</button>
+                        <button onclick="setFilter('idea')" id="tab-idea" class="filter-tab px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white text-slate-600 border border-slate-200/80 whitespace-nowrap transition">💡 ひらめき</button>
+                        <button onclick="setFilter('todo')" id="tab-todo" class="filter-tab px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white text-slate-600 border border-slate-200/80 whitespace-nowrap transition">📝 ToDo</button>
+                        <button onclick="setFilter('gratitude')" id="tab-gratitude" class="filter-tab px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white text-slate-600 border border-slate-200/80 whitespace-nowrap transition">🧘 感謝</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes List Container -->
+            <div id="notes-list" class="space-y-4 min-h-[300px]">
+                <!-- Dynamically rendered note cards -->
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
 
-<hr>
+<!-- Confirmation Modal -->
+<div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden transition-opacity">
+    <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
+        <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center">
+            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <div>
+            <h3 id="modal-title" class="font-bold text-slate-800 text-base">削除の確認</h3>
+            <p id="modal-desc" class="text-xs text-slate-500 mt-1">この操作は取り消せません。本当に削除しますか？</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="closeModal()" class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50">キャンセル</button>
+            <button id="modal-confirm-btn" class="w-full py-2.5 rounded-xl bg-rose-500 text-white font-bold text-xs hover:bg-rose-600 shadow-md shadow-rose-500/20">削除する</button>
+        </div>
+    </div>
+</div>
 
-<h2>3. 個別メモ操作 (ID指定)</h2>
-<input type="number" id="note-id" placeholder="メモIDを入力" value="1">
-<button onclick="fetchNoteById()">IDで検索 (GET)</button>
-<button onclick="deleteNote()">削除 (DELETE)</button>
+<!-- Application Logic -->
+<script>
+    // Initial Mock Sample Data
+    const SAMPLE_NOTES = [
+        {
+            id: 101,
+            title: "本日の最重要目標3つ",
+            content: "1. 新規プロジェクトの企画書ドラフト完成\n2. チームミーティングのレジュメ作成\n3. 15分間のウォーキングを実施する",
+            category: "goal",
+            priority: "high",
+            pinned: true,
+            createdAt: "2026-10-28 07:00:00"
+        },
+        {
+            id: 102,
+            title: "朝の白湯と瞑想アイデア",
+            content: "朝一番に白湯を飲むと体が温まり、頭がすっきりする。深呼吸を5分間取り入れることで集中の切り替えがスムーズに。",
+            category: "idea",
+            priority: "medium",
+            pinned: false,
+            createdAt: "2026-10-28 07:15:00"
+        },
+        {
+            id: 103,
+            title: "週末の買い物リストメモ",
+            content: "・オーガニックのお茶\n・朝食用のシリアルとアーモンドミルク\n・観葉植物用の新しい鉢植え",
+            category: "todo",
+            priority: "low",
+            pinned: false,
+            createdAt: "2026-10-28 07:20:00"
+        },
+        {
+            id: 104,
+            title: "今朝の小さな感謝",
+            content: "朝日がとても綺麗だったこと。温かいコーヒーをおいしく飲めた穏やかな時間に感謝。",
+            category: "gratitude",
+            priority: "medium",
+            pinned: false,
+            createdAt: "2026-10-28 07:25:00"
+        }
+    ];
 
-<script src="app.js"></script>
+    // Global State
+    let notes = [];
+    let currentFilter = 'all';
+    let pendingDeleteId = null;
+
+    // On Document Ready
+    window.addEventListener('DOMContentLoaded', () => {
+        initClock();
+        loadNotesFromStorage();
+        lucide.createIcons();
+    });
+
+    // Clock & Date Function
+    function initClock() {
+        const updateTime = () => {
+            const now = new Date();
+            const days = ['日', '月', '火', '水', '木', '金', '土'];
+
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const day = days[now.getDay()];
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById('live-date').innerText = `${year}年${month}月${date}日 (${day})`;
+            document.getElementById('live-clock').innerText = `${hours}:${minutes}:${seconds}`;
+
+            // Dynamic Greeting
+            const hr = now.getHours();
+            const greetingEl = document.getElementById('greeting-text');
+            if (hr >= 4 && hr < 11) {
+                greetingEl.innerText = 'おはようございます！最高の朝のスタートです ☀️';
+            } else if (hr >= 11 && hr < 17) {
+                greetingEl.innerText = 'こんにちは！素晴らしい一日をお過ごしください 🌤️';
+            } else {
+                greetingEl.innerText = 'こんばんは！今日もおつかれさまでした 🌙';
+            }
+        };
+        updateTime();
+        setInterval(updateTime, 1000);
+    }
+
+    // Load & Save Storage
+    function loadNotesFromStorage() {
+        const stored = localStorage.getItem('morning_notes_data');
+        if (stored) {
+            try {
+                notes = JSON.parse(stored);
+            } catch (e) {
+                notes = [...SAMPLE_NOTES];
+            }
+        } else {
+            notes = [...SAMPLE_NOTES];
+            saveNotesToStorage();
+        }
+        renderNotes();
+        logApi('GET', '/api/notes', 200, `Loaded ${notes.length} notes`);
+    }
+
+    function saveNotesToStorage() {
+        localStorage.setItem('morning_notes_data', JSON.stringify(notes));
+    }
+
+    // Category Meta Mapper
+    const CATEGORIES = {
+        goal: { name: '本日の目標', icon: 'sunrise', badgeBg: 'bg-amber-100 text-amber-800 border-amber-200' },
+        idea: { name: 'ひらめき', icon: 'lightbulb', badgeBg: 'bg-sky-100 text-sky-800 border-sky-200' },
+        todo: { name: 'ToDo', icon: 'check-square', badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+        gratitude: { name: '感謝', icon: 'heart', badgeBg: 'bg-rose-100 text-rose-800 border-rose-200' }
+    };
+
+    const PRIORITIES = {
+        high: { label: '高', color: 'text-rose-600 bg-rose-50 border-rose-200' },
+        medium: { label: '中', color: 'text-amber-600 bg-amber-50 border-amber-200' },
+        low: { label: '低', color: 'text-slate-600 bg-slate-50 border-slate-200' }
+    };
+
+    // Render Notes List
+    function renderNotes() {
+        const listContainer = document.getElementById('notes-list');
+        const searchKeyword = document.getElementById('search-input').value.toLowerCase().trim();
+
+        let filtered = notes.filter(note => {
+            const matchesFilter = currentFilter === 'all' || note.category === currentFilter;
+            const matchesSearch = note.title.toLowerCase().includes(searchKeyword) ||
+                note.content.toLowerCase().includes(searchKeyword) ||
+                String(note.id).includes(searchKeyword);
+            return matchesFilter && matchesSearch;
+        });
+
+        // Sort pinned first, then by ID descending
+        filtered.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.id - a.id);
+
+        document.getElementById('notes-count-badge').innerText = `${filtered.length}件`;
+
+        if (filtered.length === 0) {
+            listContainer.innerHTML = `
+                    <div class="glass-card rounded-3xl p-8 text-center border border-dashed border-slate-300">
+                        <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 mx-auto flex items-center justify-center mb-3">
+                            <i data-lucide="file-x" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-sm font-bold text-slate-700">該当するメモが見つかりません</p>
+                        <p class="text-xs text-slate-400 mt-1">新しいメモを作成するか、検索条件を更新してください。</p>
+                    </div>
+                `;
+            lucide.createIcons();
+            return;
+        }
+
+        listContainer.innerHTML = filtered.map(note => {
+            const cat = CATEGORIES[note.category] || CATEGORIES.goal;
+            const prio = PRIORITIES[note.priority] || PRIORITIES.medium;
+
+            return `
+                    <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border ${note.pinned ? 'border-amber-300 ring-2 ring-amber-400/20' : 'border-white'} relative group">
+
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1 ${cat.badgeBg}">
+                                    <i data-lucide="${cat.icon}" class="w-3 h-3"></i>
+                                    ${cat.name}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${prio.color}">
+                                    優先度: ${prio.label}
+                                </span>
+                                <span class="text-[10px] font-mono font-medium text-slate-400">ID: #${note.id}</span>
+                            </div>
+
+                            <div class="flex items-center gap-1">
+                                <button onclick="togglePin(${note.id})" title="${note.pinned ? 'ピン留め解除' : 'ピン留め'}" class="p-1.5 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition">
+                                    <i data-lucide="pin" class="w-4 h-4 ${note.pinned ? 'fill-amber-400 text-amber-500' : ''}"></i>
+                                </button>
+                                <button onclick="editNote(${note.id})" title="編集" class="p-1.5 rounded-lg text-slate-400 hover:text-sky-500 hover:bg-sky-50 transition">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="copyToClipboard('${escapeJsString(note.content)}')" title="本文をコピー" class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition">
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="confirmDeleteNote(${note.id})" title="削除 (DELETE)" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition">
+                                    <i data-lucide="trash" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 class="text-base font-bold text-slate-800 mb-1.5">${escapeHtml(note.title)}</h3>
+                        <p class="text-xs text-slate-600 whitespace-pre-line leading-relaxed mb-3 bg-white/50 p-3 rounded-xl border border-slate-100">${escapeHtml(note.content)}</p>
+
+                        <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-100">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="clock" class="w-3 h-3"></i> ${note.createdAt}
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-400">REST: /api/notes/${note.id}</span>
+                        </div>
+
+                    </div>
+                `;
+        }).join('');
+
+        lucide.createIcons();
+    }
+
+    // Form Submission (Create or Update)
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const editingId = document.getElementById('editing-id').value;
+        const title = document.getElementById('title').value.trim();
+        const content = document.getElementById('content').value.trim();
+        const category = document.getElementById('category').value;
+        const priority = document.getElementById('priority').value;
+
+        if (!title || !content) return;
+
+        if (editingId) {
+            // UPDATE (PUT)
+            const idNum = parseInt(editingId, 10);
+            const index = notes.findIndex(n => n.id === idNum);
+            if (index !== -1) {
+                notes[index] = {
+                    ...notes[index],
+                    title,
+                    content,
+                    category,
+                    priority
+                };
+                saveNotesToStorage();
+                renderNotes();
+                logApi('PUT', `/api/notes/${idNum}`, 200, 'Note updated successfully');
+                showToast('メモを更新しました！ ✏️', 'success');
+            }
+        } else {
+            // CREATE (POST)
+            const newId = notes.length > 0 ? Math.max(...notes.map(n => n.id)) + 1 : 101;
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+            const newNote = {
+                id: newId,
+                title,
+                content,
+                category,
+                priority,
+                pinned: false,
+                createdAt: timestamp
+            };
+
+            notes.unshift(newNote);
+            saveNotesToStorage();
+            renderNotes();
+            logApi('POST', '/api/notes', 201, `Created Note #${newId}`);
+            showToast('新しい朝メモを保存しました！ ☀️', 'success');
+        }
+
+        resetForm();
+    }
+
+    // Reset Form
+    function resetForm() {
+        document.getElementById('create-form').reset();
+        document.getElementById('editing-id').value = '';
+        document.getElementById('btn-text').innerText = 'メモを保存 ☀️';
+        document.getElementById('submit-btn').className = "w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-[0.99]";
+    }
+
+    // Populate Form for Editing
+    function editNote(id) {
+        const note = notes.find(n => n.id === id);
+        if (!note) return;
+
+        document.getElementById('editing-id').value = note.id;
+        document.getElementById('title').value = note.title;
+        document.getElementById('content').value = note.content;
+        document.getElementById('category').value = note.category;
+        document.getElementById('priority').value = note.priority;
+
+        document.getElementById('btn-text').innerText = `メモ #${note.id} を更新 (PUT)`;
+        document.getElementById('submit-btn').className = "w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white font-bold text-sm shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-[0.99]";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast(`メモ #${id} の編集モード`, 'info');
+    }
+
+    // Toggle Pin Status
+    function togglePin(id) {
+        const note = notes.find(n => n.id === id);
+        if (note) {
+            note.pinned = !note.pinned;
+            saveNotesToStorage();
+            renderNotes();
+            logApi('PATCH', `/api/notes/${id}`, 200, `Pinned: ${note.pinned}`);
+        }
+    }
+
+    // Single Note Inspector (GET /api/notes/:id)
+    function fetchNoteById() {
+        const idInput = document.getElementById('note-id');
+        const resultBox = document.getElementById('inspector-result');
+        const targetId = parseInt(idInput.value, 10);
+
+        if (!targetId) {
+            showToast('有効なIDを入力してください', 'error');
+            return;
+        }
+
+        const found = notes.find(n => n.id === targetId);
+
+        resultBox.classList.remove('hidden');
+
+        if (found) {
+            logApi('GET', `/api/notes/${targetId}`, 200, 'Found note');
+            resultBox.className = "rounded-2xl p-4 bg-sky-50/90 border border-sky-200 text-xs transition-all space-y-2";
+            resultBox.innerHTML = `
+                    <div class="flex items-center justify-between font-bold text-sky-900 border-b border-sky-200/60 pb-1.5">
+                        <span class="flex items-center gap-1"><i data-lucide="check-circle-2" class="w-4 h-4 text-sky-600"></i> メモ発見 (#${found.id})</span>
+                        <span class="text-[10px] bg-sky-200/80 px-2 py-0.5 rounded-md">${found.category}</span>
+                    </div>
+                    <div><strong>タイトル:</strong> ${escapeHtml(found.title)}</div>
+                    <div><strong>本文:</strong> ${escapeHtml(found.content)}</div>
+                    <div class="text-[10px] text-slate-400">作成日時: ${found.createdAt}</div>
+                    <div class="flex gap-2 pt-1">
+                        <button onclick="editNote(${found.id})" class="px-2.5 py-1 bg-sky-600 text-white rounded-lg font-bold text-[11px]">このメモを編集</button>
+                        <button onclick="confirmDeleteNote(${found.id})" class="px-2.5 py-1 bg-rose-500 text-white rounded-lg font-bold text-[11px]">削除</button>
+                    </div>
+                `;
+        } else {
+            logApi('GET', `/api/notes/${targetId}`, 404, 'Note Not Found');
+            resultBox.className = "rounded-2xl p-4 bg-rose-50 border border-rose-200 text-xs transition-all space-y-1";
+            resultBox.innerHTML = `
+                    <div class="font-bold text-rose-700 flex items-center gap-1">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i> ID: #${targetId} のメモが見つかりません (404)
+                    </div>
+                    <p class="text-rose-600/80 text-[11px]">指定されたIDは存在しないか、既に削除されています。</p>
+                `;
+        }
+        lucide.createIcons();
+    }
+
+    // Fetch All Notes (Manual trigger)
+    function fetchNotes(userTriggered = false) {
+        loadNotesFromStorage();
+        if (userTriggered) {
+            showToast('メモ一覧を更新しました 🔄', 'info');
+        }
+    }
+
+    // Delete Dialog
+    function confirmDeleteNote(id) {
+        pendingDeleteId = id;
+        document.getElementById('modal-title').innerText = `メモ #${id} の削除`;
+        document.getElementById('modal-desc').innerText = `このメモを削除しますか？この操作は戻せません。`;
+        document.getElementById('modal-confirm-btn').onclick = executeDeleteNote;
+        document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    function executeDeleteNote() {
+        if (!pendingDeleteId) return;
+        const delId = pendingDeleteId;
+        notes = notes.filter(n => n.id !== delId);
+        saveNotesToStorage();
+        renderNotes();
+
+        // Clear inspector if inspecting deleted
+        const inspectorBox = document.getElementById('inspector-result');
+        inspectorBox.classList.add('hidden');
+
+        logApi('DELETE', `/api/notes/${delId}`, 200, 'Note deleted');
+        showToast(`メモ #${delId} を削除しました`, 'error');
+        closeModal();
+    }
+
+    function clearAllNotesPrompt() {
+        if (notes.length === 0) return;
+        pendingDeleteId = 'ALL';
+        document.getElementById('modal-title').innerText = `すべてのメモを消去`;
+        document.getElementById('modal-desc').innerText = `登録されているすべての朝メモを完全消去します。よろしいですか？`;
+        document.getElementById('modal-confirm-btn').onclick = () => {
+            notes = [];
+            saveNotesToStorage();
+            renderNotes();
+            logApi('DELETE', '/api/notes', 200, 'All notes deleted');
+            showToast('すべてのメモを全消去しました', 'error');
+            closeModal();
+        };
+        document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('modal-backdrop').classList.add('hidden');
+        pendingDeleteId = null;
+    }
+
+    // Set Filter Tab
+    function setFilter(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.className = "filter-tab px-3 py-1.5 rounded-lg bg-white/80 hover:bg-white text-slate-600 border border-slate-200/80 whitespace-nowrap transition font-medium";
+        });
+
+        const activeTab = document.getElementById(`tab-${filter}`);
+        if (activeTab) {
+            activeTab.className = "filter-tab px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold whitespace-nowrap transition shadow-sm";
+        }
+        renderNotes();
+    }
+
+    // Mock API Console Log
+    function logApi(method, endpoint, status, message) {
+        const consoleEl = document.getElementById('api-console');
+        const time = new Date().toLocaleTimeString('ja-JP', { hour12: false });
+
+        let statusColor = status >= 200 && status < 300 ? 'text-emerald-400' : 'text-rose-400';
+        let methodColor = 'text-amber-300';
+        if (method === 'GET') methodColor = 'text-sky-300';
+        if (method === 'DELETE') methodColor = 'text-rose-300';
+
+        const logItem = document.createElement('div');
+        logItem.className = "flex items-start gap-1.5 font-mono leading-tight";
+        logItem.innerHTML = `
+                <span class="text-slate-500">[${time}]</span>
+                <span class="${methodColor} font-bold">${method}</span>
+                <span class="text-slate-300">${endpoint}</span>
+                <span class="${statusColor}">${status}</span>
+                <span class="text-slate-400 font-sans text-[10px]">- ${message}</span>
+            `;
+
+        consoleEl.prepend(logItem);
+    }
+
+    function clearConsoleLog() {
+        document.getElementById('api-console').innerHTML = `<div class="text-slate-500">// API Request response monitor</div>`;
+    }
+
+    // Toast Messages
+    function showToast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+
+        let bg = 'bg-slate-800 text-white';
+        if (type === 'success') bg = 'bg-amber-500 text-white shadow-amber-500/30';
+        if (type === 'error') bg = 'bg-rose-500 text-white shadow-rose-500/30';
+        if (type === 'info') bg = 'bg-sky-600 text-white shadow-sky-600/30';
+
+        toast.className = `pointer-events-auto px-4 py-2.5 rounded-2xl shadow-xl ${bg} font-bold text-xs flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0`;
+        toast.innerHTML = `<span>${msg}</span>`;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', '-translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Copy Helper using execCommand fallback
+    function copyToClipboard(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showToast('クリップボードにコピーしました 📋', 'success');
+        } catch (err) {
+            showToast('コピーに失敗しました', 'error');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    // Utility: Escape HTML
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Utility: Escape JS string for inline events
+    function escapeJsString(str) {
+        return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    }
+</script>
 </body>
 </html>
