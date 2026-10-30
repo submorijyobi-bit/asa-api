@@ -214,20 +214,6 @@
                 </div>
             </section>
 
-            <!-- 3. Mock REST API Debug Log Console -->
-            <section class="glass-card rounded-3xl p-5 shadow-xl shadow-amber-500/5 border border-white">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="terminal" class="w-4 h-4 text-slate-500"></i>
-                        <span class="text-xs font-bold text-slate-600 uppercase tracking-wider">REST API 通信ログ</span>
-                    </div>
-                    <button onclick="clearConsoleLog()" class="text-[10px] text-slate-400 hover:text-slate-600">クリア</button>
-                </div>
-                <div id="api-console" class="bg-slate-900 text-emerald-400 p-3 rounded-xl font-mono text-[11px] h-28 overflow-y-auto space-y-1 shadow-inner border border-slate-800">
-                    <div class="text-slate-500">// API Request response monitor</div>
-                </div>
-            </section>
-
         </div>
 
         <!-- Right Panel: Note List & Filter View (7 cols on lg) -->
@@ -707,31 +693,10 @@
         renderNotes();
     }
 
-    // Mock API Console Log
+    // Mock API Console Log Helper
     function logApi(method, endpoint, status, message) {
-        const consoleEl = document.getElementById('api-console');
-        const time = new Date().toLocaleTimeString('ja-JP', { hour12: false });
-
-        let statusColor = status >= 200 && status < 300 ? 'text-emerald-400' : 'text-rose-400';
-        let methodColor = 'text-amber-300';
-        if (method === 'GET') methodColor = 'text-sky-300';
-        if (method === 'DELETE') methodColor = 'text-rose-300';
-
-        const logItem = document.createElement('div');
-        logItem.className = "flex items-start gap-1.5 font-mono leading-tight";
-        logItem.innerHTML = `
-                <span class="text-slate-500">[${time}]</span>
-                <span class="${methodColor} font-bold">${method}</span>
-                <span class="text-slate-300">${endpoint}</span>
-                <span class="${statusColor}">${status}</span>
-                <span class="text-slate-400 font-sans text-[10px]">- ${message}</span>
-            `;
-
-        consoleEl.prepend(logItem);
-    }
-
-    function clearConsoleLog() {
-        document.getElementById('api-console').innerHTML = `<div class="text-slate-500">// API Request response monitor</div>`;
+        // Log output to browser console if needed
+        console.log(`[API ${method}] ${endpoint} (${status}): ${message}`);
     }
 
     // Toast Messages
